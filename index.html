@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Arm Height Detection MVP</title>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slackline Arm Detection MVP</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       background: black;
-      font-family: sans-serif;
     }
     video, canvas {
       position: absolute;
@@ -18,18 +16,18 @@
       left: 0;
       width: 100%;
       height: auto;
-      transform: scaleX(-1); /* mirror selfie view */
+      transform: scaleX(-1);
     }
+    video { z-index: 1; }
+    canvas { z-index: 2; }
   </style>
 </head>
-
 <body>
 
-  <!-- Required camera elements -->
   <video id="video" autoplay playsinline></video>
   <canvas id="canvas"></canvas>
 
-  <!-- Mediapipe dependencies -->
+  <!-- Mediapipe Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
@@ -39,39 +37,29 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
-    console.log("Starting camera…");
+    // -----------------------------
+    // Start camera
+    // -----------------------------
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+      .then(stream => {
+        video.srcObject = stream;
+        video.onloadeddata = () => {
+          canvas.width = video.videoWidth || 640;
+          canvas.height = video.videoHeight || 480;
+          startPose();
+        };
+      })
+      .catch(err => {
+        console.error("Camera error:", err);
+        alert("Camera access denied or blocked.");
+      });
 
-    // -------------------------
-    // 1. CAMERA INITIALIZATION
-    // -------------------------
-    navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" }   // Selfie camera for testing
-    })
-    .then(stream => {
-      video.srcObject = stream;
-
-      video.onloadeddata = () => {
-        console.log("Camera loaded:", video.videoWidth, video.videoHeight);
-
-        // Prevent zero-size video
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-
-        startPoseDetection();
-      };
-    })
-    .catch(err => {
-      console.error("CAMERA ERROR:", err);
-      alert("Camera blocked. Enable camera permissions in your device settings.");
-    });
-
-    // -------------------------
-    // 2. START MEDIAPIPE POSE
-    // -------------------------
-    function startPoseDetection() {
+    // -----------------------------
+    // Initialize Mediapipe Pose
+    // -----------------------------
+    function startPose() {
       const pose = new Pose.Pose({
-        locateFile: (file) =>
-          `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/${file}`
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/${file}`
       });
 
       pose.setOptions({
@@ -83,30 +71,27 @@
 
       pose.onResults(onResults);
 
-      console.log("Starting Mediapipe Camera…");
-
-      const camera = new CameraUtils.Camera(video, {
+      const cameraUtils = new CameraUtils.Camera(video, {
         onFrame: async () => {
-          if (video.videoWidth === 0) return;
+          if(video.videoWidth === 0) return;
           await pose.send({ image: video });
         },
         width: video.videoWidth,
         height: video.videoHeight
       });
 
-      camera.start();
+      cameraUtils.start();
     }
 
-    // -------------------------
-    // 3. DRAWING + ARM LOGIC
-    // -------------------------
+    // -----------------------------
+    // Draw results + arm detection
+    // -----------------------------
     function onResults(results) {
       ctx.save();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
-      if (results.poseLandmarks) {
+      if(results.poseLandmarks) {
         drawConnectors(ctx, results.poseLandmarks, Pose.POSE_CONNECTIONS);
         drawLandmarks(ctx, results.poseLandmarks);
 
