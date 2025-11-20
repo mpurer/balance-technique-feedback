@@ -3,115 +3,129 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Arm Height Test</title>
+  <title>Arm Height Detection MVP</title>
 
   <style>
     body {
       margin: 0;
       overflow: hidden;
       background: black;
+      font-family: sans-serif;
     }
     video, canvas {
       position: absolute;
-      width: 100%;
-      height: auto;
       top: 0;
       left: 0;
-      transform: scaleX(-1); /* mirror for selfie view */
+      width: 100%;
+      height: auto;
+      transform: scaleX(-1); /* mirror selfie view */
     }
   </style>
 </head>
 
 <body>
 
-  <!-- REQUIRED ELEMENTS -->
+  <!-- Required camera elements -->
   <video id="video" autoplay playsinline></video>
   <canvas id="canvas"></canvas>
 
-  <!-- Mediapipe Libraries -->
+  <!-- Mediapipe dependencies -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
   <script>
-    const videoElement = document.getElementById("video");
-    const canvasElement = document.getElementById("canvas");
-    const canvasCtx = canvasElement.getContext("2d");
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
 
-    // Initialize Mediapipe Pose
-    const pose = new Pose.Pose({
-      locateFile: (file) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/${file}`
+    console.log("Starting camera…");
+
+    // -------------------------
+    // 1. CAMERA INITIALIZATION
+    // -------------------------
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" }   // Selfie camera for testing
+    })
+    .then(stream => {
+      video.srcObject = stream;
+
+      video.onloadeddata = () => {
+        console.log("Camera loaded:", video.videoWidth, video.videoHeight);
+
+        // Prevent zero-size video
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+
+        startPoseDetection();
+      };
+    })
+    .catch(err => {
+      console.error("CAMERA ERROR:", err);
+      alert("Camera blocked. Enable camera permissions in your device settings.");
     });
 
-    pose.setOptions({
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
-
-    pose.onResults(onResults);
-
-    // Drawing + Arm Height Logic
-    function onResults(results) {
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
-      canvasCtx.drawImage(
-        results.image,
-        0,
-        0,
-        canvasElement.width,
-        canvasElement.height
-      );
-
-      if (results.poseLandmarks) {
-        drawConnectors(canvasCtx, results.poseLandmarks, Pose.POSE_CONNECTIONS);
-        drawLandmarks(canvasCtx, results.poseLandmarks);
-
-        const lW = results.poseLandmarks[15]; // left wrist
-        const rW = results.poseLandmarks[16]; // right wrist
-        const lS = results.poseLandmarks[11]; // left shoulder
-        const rS = results.poseLandmarks[12]; // right shoulder
-
-        const left = lW.y < lS.y ? "LEFT ARM: ABOVE" : "LEFT ARM: BELOW";
-        const right = rW.y < rS.y ? "RIGHT ARM: ABOVE" : "RIGHT ARM: BELOW";
-
-        canvasCtx.font = "30px Arial";
-        canvasCtx.fillStyle = "yellow";
-        canvasCtx.fillText(left, 10, 40);
-        canvasCtx.fillText(right, 10, 80);
-      }
-
-      canvasCtx.restore();
-    }
-
-    // Start camera
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-      .then((stream) => {
-        videoElement.srcObject = stream;
-
-        videoElement.onloadeddata = () => {
-          canvasElement.width = videoElement.videoWidth;
-          canvasElement.height = videoElement.videoHeight;
-
-          const camera = new CameraUtils.Camera(videoElement, {
-            onFrame: async () => {
-              await pose.send({ image: videoElement });
-            },
-            width: videoElement.videoWidth,
-            height: videoElement.videoHeight
-          });
-
-          camera.start();
-        };
-      })
-      .catch((error) => {
-        console.error("Camera error:", error);
-        alert("Camera access failed. Please allow camera permission.");
+    // -------------------------
+    // 2. START MEDIAPIPE POSE
+    // -------------------------
+    function startPoseDetection() {
+      const pose = new Pose.Pose({
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/${file}`
       });
 
+      pose.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+
+      pose.onResults(onResults);
+
+      console.log("Starting Mediapipe Camera…");
+
+      const camera = new CameraUtils.Camera(video, {
+        onFrame: async () => {
+          if (video.videoWidth === 0) return;
+          await pose.send({ image: video });
+        },
+        width: video.videoWidth,
+        height: video.videoHeight
+      });
+
+      camera.start();
+    }
+
+    // -------------------------
+    // 3. DRAWING + ARM LOGIC
+    // -------------------------
+    function onResults(results) {
+      ctx.save();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+      if (results.poseLandmarks) {
+        drawConnectors(ctx, results.poseLandmarks, Pose.POSE_CONNECTIONS);
+        drawLandmarks(ctx, results.poseLandmarks);
+
+        const leftWrist = results.poseLandmarks[15];
+        const rightWrist = results.poseLandmarks[16];
+        const leftShoulder = results.poseLandmarks[11];
+        const rightShoulder = results.poseLandmarks[12];
+
+        const leftStatus = leftWrist.y < leftShoulder.y ? "LEFT: ABOVE" : "LEFT: BELOW";
+        const rightStatus = rightWrist.y < rightShoulder.y ? "RIGHT: ABOVE" : "RIGHT: BELOW";
+
+        ctx.fillStyle = "yellow";
+        ctx.font = "32px Arial";
+        ctx.fillText(leftStatus, 20, 40);
+        ctx.fillText(rightStatus, 20, 80);
+      }
+
+      ctx.restore();
+    }
   </script>
 
 </body>
