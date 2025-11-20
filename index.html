@@ -1,93 +1,68 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Slackline Arm Detection MVP</title>
-<style>
-  video, canvas {
-    position: absolute;
-    width: 100%;
-    height: auto;
-    transform: scaleX(-1); /* mirror for front camera */
-  }
-</style>
-</head>
-<body>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
-<video id="video" autoplay playsinline></video>
-<canvas id="canvas"></canvas>
+<script>
 
-<script type="module">
-import {Pose} from "https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js";
-import {drawConnectors, drawLandmarks} from "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.5/drawing_utils.js";
-
-// Get video and canvas elements
 const videoElement = document.getElementById('video');
 const canvasElement = document.getElementById('canvas');
 const canvasCtx = canvasElement.getContext('2d');
 
-// Start camera
-navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-  .then(stream => { videoElement.srcObject = stream; })
-  .catch(err => console.error("Error accessing camera: ", err));
-
-// Setup MediaPipe Pose
-const pose = new Pose({
+const pose = new Pose.Pose({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/${file}`
 });
 
 pose.setOptions({
   modelComplexity: 1,
   smoothLandmarks: true,
-  enableSegmentation: false,
   minDetectionConfidence: 0.5,
   minTrackingConfidence: 0.5
 });
 
 pose.onResults(onResults);
 
-// Process each video frame
-async function detectPose() {
-  await pose.send({image: videoElement});
-  requestAnimationFrame(detectPose);
-}
-
-// Handle results
 function onResults(results) {
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
   canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
   if (results.poseLandmarks) {
-    drawConnectors(canvasCtx, results.poseLandmarks, Pose.POSE_CONNECTIONS, {color: 'white', lineWidth: 2});
-    drawLandmarks(canvasCtx, results.poseLandmarks, {color: 'red', lineWidth: 2});
+    drawConnectors(canvasCtx, results.poseLandmarks, Pose.POSE_CONNECTIONS);
+    drawLandmarks(canvasCtx, results.poseLandmarks);
 
     // Arm detection
-    const leftWrist = results.poseLandmarks[15];
-    const rightWrist = results.poseLandmarks[16];
-    const leftShoulder = results.poseLandmarks[11];
-    const rightShoulder = results.poseLandmarks[12];
+    const lW = results.poseLandmarks[15];
+    const rW = results.poseLandmarks[16];
+    const lS = results.poseLandmarks[11];
+    const rS = results.poseLandmarks[12];
 
-    let leftArm = leftWrist.y < leftShoulder.y ? 'above' : 'below';
-    let rightArm = rightWrist.y < rightShoulder.y ? 'above' : 'below';
+    const left = lW.y < lS.y ? "LEFT ARM: ABOVE" : "LEFT ARM: BELOW";
+    const right = rW.y < rS.y ? "RIGHT ARM: ABOVE" : "RIGHT ARM: BELOW";
 
     canvasCtx.font = "30px Arial";
     canvasCtx.fillStyle = "yellow";
-    canvasCtx.fillText(`Left arm: ${leftArm}`, 10, 40);
-    canvasCtx.fillText(`Right arm: ${rightArm}`, 10, 80);
+    canvasCtx.fillText(left, 10, 40);
+    canvasCtx.fillText(right, 10, 80);
   }
 
   canvasCtx.restore();
 }
 
-// Resize canvas to match video
-videoElement.addEventListener('loadeddata', () => {
-  canvasElement.width = videoElement.videoWidth;
-  canvasElement.height = videoElement.videoHeight;
-  detectPose();
-});
-</script>
+navigator.mediaDevices
+  .getUserMedia({ video: { facingMode: "user" } })
+  .then(stream => {
+    videoElement.srcObject = stream;
+    videoElement.onloadeddata = () => {
+      canvasElement.width = videoElement.videoWidth;
+      canvasElement.height = videoElement.videoHeight;
 
-</body>
-</html>
+      const camera = new CameraUtils.Camera(videoElement, {
+        onFrame: async () => { await pose.send({ image: videoElement }); },
+        width: videoElement.videoWidth,
+        height: videoElement.videoHeight
+      });
+      camera.start();
+    };
+  });
+
+</script>
