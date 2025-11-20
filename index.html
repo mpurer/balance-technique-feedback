@@ -1,68 +1,118 @@
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arm Height Test</title>
 
-<script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+    }
+    video, canvas {
+      position: absolute;
+      width: 100%;
+      height: auto;
+      top: 0;
+      left: 0;
+      transform: scaleX(-1); /* mirror for selfie view */
+    }
+  </style>
+</head>
 
-const videoElement = document.getElementById('video');
-const canvasElement = document.getElementById('canvas');
-const canvasCtx = canvasElement.getContext('2d');
+<body>
 
-const pose = new Pose.Pose({
-  locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/${file}`
-});
+  <!-- REQUIRED ELEMENTS -->
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
 
-pose.setOptions({
-  modelComplexity: 1,
-  smoothLandmarks: true,
-  minDetectionConfidence: 0.5,
-  minTrackingConfidence: 0.5
-});
+  <!-- Mediapipe Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
-pose.onResults(onResults);
+  <script>
+    const videoElement = document.getElementById("video");
+    const canvasElement = document.getElementById("canvas");
+    const canvasCtx = canvasElement.getContext("2d");
 
-function onResults(results) {
-  canvasCtx.save();
-  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-  canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+    // Initialize Mediapipe Pose
+    const pose = new Pose.Pose({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/${file}`
+    });
 
-  if (results.poseLandmarks) {
-    drawConnectors(canvasCtx, results.poseLandmarks, Pose.POSE_CONNECTIONS);
-    drawLandmarks(canvasCtx, results.poseLandmarks);
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
 
-    // Arm detection
-    const lW = results.poseLandmarks[15];
-    const rW = results.poseLandmarks[16];
-    const lS = results.poseLandmarks[11];
-    const rS = results.poseLandmarks[12];
+    pose.onResults(onResults);
 
-    const left = lW.y < lS.y ? "LEFT ARM: ABOVE" : "LEFT ARM: BELOW";
-    const right = rW.y < rS.y ? "RIGHT ARM: ABOVE" : "RIGHT ARM: BELOW";
+    // Drawing + Arm Height Logic
+    function onResults(results) {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-    canvasCtx.font = "30px Arial";
-    canvasCtx.fillStyle = "yellow";
-    canvasCtx.fillText(left, 10, 40);
-    canvasCtx.fillText(right, 10, 80);
-  }
+      canvasCtx.drawImage(
+        results.image,
+        0,
+        0,
+        canvasElement.width,
+        canvasElement.height
+      );
 
-  canvasCtx.restore();
-}
+      if (results.poseLandmarks) {
+        drawConnectors(canvasCtx, results.poseLandmarks, Pose.POSE_CONNECTIONS);
+        drawLandmarks(canvasCtx, results.poseLandmarks);
 
-navigator.mediaDevices
-  .getUserMedia({ video: { facingMode: "user" } })
-  .then(stream => {
-    videoElement.srcObject = stream;
-    videoElement.onloadeddata = () => {
-      canvasElement.width = videoElement.videoWidth;
-      canvasElement.height = videoElement.videoHeight;
+        const lW = results.poseLandmarks[15]; // left wrist
+        const rW = results.poseLandmarks[16]; // right wrist
+        const lS = results.poseLandmarks[11]; // left shoulder
+        const rS = results.poseLandmarks[12]; // right shoulder
 
-      const camera = new CameraUtils.Camera(videoElement, {
-        onFrame: async () => { await pose.send({ image: videoElement }); },
-        width: videoElement.videoWidth,
-        height: videoElement.videoHeight
+        const left = lW.y < lS.y ? "LEFT ARM: ABOVE" : "LEFT ARM: BELOW";
+        const right = rW.y < rS.y ? "RIGHT ARM: ABOVE" : "RIGHT ARM: BELOW";
+
+        canvasCtx.font = "30px Arial";
+        canvasCtx.fillStyle = "yellow";
+        canvasCtx.fillText(left, 10, 40);
+        canvasCtx.fillText(right, 10, 80);
+      }
+
+      canvasCtx.restore();
+    }
+
+    // Start camera
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+      .then((stream) => {
+        videoElement.srcObject = stream;
+
+        videoElement.onloadeddata = () => {
+          canvasElement.width = videoElement.videoWidth;
+          canvasElement.height = videoElement.videoHeight;
+
+          const camera = new CameraUtils.Camera(videoElement, {
+            onFrame: async () => {
+              await pose.send({ image: videoElement });
+            },
+            width: videoElement.videoWidth,
+            height: videoElement.videoHeight
+          });
+
+          camera.start();
+        };
+      })
+      .catch((error) => {
+        console.error("Camera error:", error);
+        alert("Camera access failed. Please allow camera permission.");
       });
-      camera.start();
-    };
-  });
 
-</script>
+  </script>
+
+</body>
+</html>
