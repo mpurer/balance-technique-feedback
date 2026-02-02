@@ -136,13 +136,27 @@
       }
     }
 
+    // Store latest pose results
+    let latestLandmarks = null;
+
     // -----------------------------
     // Manual frame loop with throttling
     // -----------------------------
     function processFrame() {
       frameCount++;
 
-      // Only process every 3rd frame to reduce load
+      // Always draw video to canvas for smooth preview
+      if (video.videoWidth > 0) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Draw stored landmarks on top
+        if (latestLandmarks) {
+          drawConnectors(ctx, latestLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
+          drawLandmarks(ctx, latestLandmarks, {color: '#FF0000', radius: 3});
+        }
+      }
+
+      // Only send to pose detection every 3rd frame to reduce load
       if (frameCount % 3 === 0 && !isProcessing && pose && video.videoWidth > 0) {
         isProcessing = true;
         pose.send({ image: video }).then(() => {
@@ -157,16 +171,12 @@
     }
 
     // -----------------------------
-    // Draw results
+    // Handle pose results
     // -----------------------------
     function onResults(results) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-
       if (results.poseLandmarks) {
-        // Simple landmark drawing
-        drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
-        drawLandmarks(ctx, results.poseLandmarks, {color: '#FF0000', radius: 3});
+        // Store landmarks for continuous drawing
+        latestLandmarks = results.poseLandmarks;
 
         // Arm detection
         const leftWrist = results.poseLandmarks[15];
