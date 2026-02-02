@@ -86,11 +86,21 @@
     .then(stream => {
       log("Camera OK");
       video.srcObject = stream;
-      video.onloadeddata = () => {
-        log("Video: " + video.videoWidth + "x" + video.videoHeight);
+
+      video.onloadedmetadata = () => {
+        log("Metadata: " + video.videoWidth + "x" + video.videoHeight);
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        startPose();
+
+        // Explicitly play video (required on mobile)
+        video.play().then(() => {
+          log("Video playing");
+          startPose();
+        }).catch(err => {
+          log("Play error: " + err.message);
+          // Try starting anyway
+          startPose();
+        });
       };
     })
     .catch(err => {
@@ -145,8 +155,13 @@
     function processFrame() {
       frameCount++;
 
+      // Log video state once
+      if (frameCount === 10) {
+        log("paused:" + video.paused + " ready:" + video.readyState);
+      }
+
       // Always draw video to canvas for smooth preview
-      if (video.videoWidth > 0) {
+      if (video.readyState >= 2 && video.videoWidth > 0) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         // Draw stored landmarks on top
