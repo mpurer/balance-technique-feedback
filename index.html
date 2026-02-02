@@ -20,38 +20,70 @@
     }
     video { z-index: 1; }
     canvas { z-index: 2; }
+    #debug {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.8);
+      color: lime;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 9999;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
 
   <video id="video" autoplay playsinline></video>
   <canvas id="canvas"></canvas>
+  <div id="debug">Debug log:</div>
 
-  <!-- Mediapipe Libraries -->
-  <script src="https://cdn.jsdelivr.net/gh/google/mediapipe/pose@0.5/pose.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/google/mediapipe/pose@0.5/camera_utils.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/google/mediapipe/pose@0.5/drawing_utils.js"></script>
+  <!-- Mediapipe Libraries - Fixed CDN paths -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 
 
   <script>
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
+    const debugEl = document.getElementById("debug");
+
+    // Debug logging function - shows on screen for mobile
+    function log(msg) {
+      console.log(msg);
+      debugEl.textContent += "\n" + msg;
+      debugEl.scrollTop = debugEl.scrollHeight;
+    }
+
+    log("Script started");
+    log("Pose available: " + (typeof Pose !== "undefined"));
+    log("Camera available: " + (typeof Camera !== "undefined"));
+    log("drawLandmarks available: " + (typeof drawLandmarks !== "undefined"));
 
     // -----------------------------
     // Start camera
     // -----------------------------
+    log("Requesting camera...");
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
       .then(stream => {
+        log("Camera stream obtained");
         video.srcObject = stream;
         video.onloadeddata = () => {
+          log("Video loaded: " + video.videoWidth + "x" + video.videoHeight);
           canvas.width = video.videoWidth || 640;
           canvas.height = video.videoHeight || 480;
           startPose();
         };
       })
       .catch(err => {
-        console.error("Camera error:", err);
+        log("Camera error: " + err.message);
         alert("Camera access denied or blocked.");
       });
 
@@ -59,42 +91,69 @@
     // Initialize Mediapipe Pose
     // -----------------------------
     function startPose() {
-      const pose = new Pose.Pose({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/${file}`
-      });
+      log("Starting Pose initialization...");
 
-      pose.setOptions({
-        modelComplexity: 1,
-        smoothLandmarks: true,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
+      try {
+        const pose = new Pose({
+          locateFile: (file) => {
+            const url = `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+            log("Loading: " + file);
+            return url;
+          }
+        });
 
-      pose.onResults(onResults);
+        log("Pose instance created");
 
-      const cameraUtils = new CameraUtils.Camera(video, {
-        onFrame: async () => {
-          if(video.videoWidth === 0) return;
-          await pose.send({ image: video });
-        },
-        width: video.videoWidth,
-        height: video.videoHeight
-      });
+        pose.setOptions({
+          modelComplexity: 1,
+          smoothLandmarks: true,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
 
-      cameraUtils.start();
+        log("Pose options set");
+
+        pose.onResults(onResults);
+
+        log("Creating Camera...");
+        const camera = new Camera(video, {
+          onFrame: async () => {
+            if(video.videoWidth === 0) return;
+            await pose.send({ image: video });
+          },
+          width: video.videoWidth,
+          height: video.videoHeight
+        });
+
+        log("Starting camera loop...");
+        camera.start();
+
+      } catch(err) {
+        log("ERROR in startPose: " + err.message);
+      }
     }
+
+    let frameCount = 0;
 
     // -----------------------------
     // Draw results + arm detection
     // -----------------------------
     function onResults(results) {
+      frameCount++;
+      if(frameCount <= 3) {
+        log("onResults called, frame #" + frameCount);
+        log("Has landmarks: " + !!results.poseLandmarks);
+      }
+
       ctx.save();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
       if(results.poseLandmarks) {
-        drawConnectors(ctx, results.poseLandmarks, Pose.POSE_CONNECTIONS);
-        drawLandmarks(ctx, results.poseLandmarks);
+        if(frameCount <= 3) log("Drawing landmarks...");
+
+        drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
+        drawLandmarks(ctx, results.poseLandmarks, {color: '#FF0000', lineWidth: 1, radius: 3});
 
         const leftWrist = results.poseLandmarks[15];
         const rightWrist = results.poseLandmarks[16];
