@@ -10,16 +10,14 @@
       overflow: hidden;
       background: black;
     }
-    video, canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
+    video {
+      display: none;
+    }
+    canvas {
       width: 100%;
       height: auto;
       transform: scaleX(-1);
     }
-    video { z-index: 1; }
-    canvas { z-index: 2; }
     #debug {
       position: fixed;
       bottom: 10px;
@@ -30,10 +28,19 @@
       font-family: monospace;
       font-size: 12px;
       padding: 10px;
-      max-height: 200px;
+      max-height: 100px;
       overflow-y: auto;
       z-index: 9999;
-      white-space: pre-wrap;
+    }
+    #status {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: yellow;
+      font-family: Arial;
+      font-size: 24px;
+      z-index: 9999;
+      text-shadow: 2px 2px 4px black;
     }
   </style>
 </head>
@@ -41,135 +48,139 @@
 
   <video id="video" autoplay playsinline></video>
   <canvas id="canvas"></canvas>
-  <div id="debug">Debug log:</div>
+  <div id="status">Loading...</div>
+  <div id="debug">Debug:</div>
 
-  <!-- Mediapipe Libraries - Fixed CDN paths -->
+  <!-- Mediapipe Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-
 
   <script>
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const debugEl = document.getElementById("debug");
+    const statusEl = document.getElementById("status");
 
-    // Debug logging function - shows on screen for mobile
+    let debugLines = [];
     function log(msg) {
       console.log(msg);
-      debugEl.textContent += "\n" + msg;
-      debugEl.scrollTop = debugEl.scrollHeight;
+      debugLines.push(msg);
+      if (debugLines.length > 5) debugLines.shift();
+      debugEl.textContent = debugLines.join("\n");
     }
 
-    log("Script started");
-    log("Pose available: " + (typeof Pose !== "undefined"));
-    log("Camera available: " + (typeof Camera !== "undefined"));
-    log("drawLandmarks available: " + (typeof drawLandmarks !== "undefined"));
+    log("Starting...");
 
     // -----------------------------
-    // Start camera
+    // Start camera with LOW resolution
     // -----------------------------
-    log("Requesting camera...");
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-      .then(stream => {
-        log("Camera stream obtained");
-        video.srcObject = stream;
-        video.onloadeddata = () => {
-          log("Video loaded: " + video.videoWidth + "x" + video.videoHeight);
-          canvas.width = video.videoWidth || 640;
-          canvas.height = video.videoHeight || 480;
-          startPose();
-        };
-      })
-      .catch(err => {
-        log("Camera error: " + err.message);
-        alert("Camera access denied or blocked.");
-      });
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user",
+        width: { ideal: 320 },
+        height: { ideal: 240 }
+      }
+    })
+    .then(stream => {
+      log("Camera OK");
+      video.srcObject = stream;
+      video.onloadeddata = () => {
+        log("Video: " + video.videoWidth + "x" + video.videoHeight);
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        startPose();
+      };
+    })
+    .catch(err => {
+      log("Camera error: " + err.message);
+    });
 
     // -----------------------------
-    // Initialize Mediapipe Pose
+    // Initialize Mediapipe Pose - LITE model
     // -----------------------------
+    let pose = null;
+    let isProcessing = false;
+    let frameCount = 0;
+
     function startPose() {
-      log("Starting Pose initialization...");
+      log("Init Pose (lite)...");
 
       try {
-        const pose = new Pose({
-          locateFile: (file) => {
-            const url = `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-            log("Loading: " + file);
-            return url;
-          }
+        pose = new Pose({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
         });
 
-        log("Pose instance created");
-
         pose.setOptions({
-          modelComplexity: 1,
+          modelComplexity: 0,  // LITE model for mobile
           smoothLandmarks: true,
           minDetectionConfidence: 0.5,
           minTrackingConfidence: 0.5
         });
 
-        log("Pose options set");
-
         pose.onResults(onResults);
 
-        log("Creating Camera...");
-        const camera = new Camera(video, {
-          onFrame: async () => {
-            if(video.videoWidth === 0) return;
-            await pose.send({ image: video });
-          },
-          width: video.videoWidth,
-          height: video.videoHeight
+        // Initialize pose with a single frame first
+        pose.initialize().then(() => {
+          log("Pose ready!");
+          requestAnimationFrame(processFrame);
+        }).catch(err => {
+          log("Init error: " + err.message);
+          // Try anyway
+          requestAnimationFrame(processFrame);
         });
 
-        log("Starting camera loop...");
-        camera.start();
-
       } catch(err) {
-        log("ERROR in startPose: " + err.message);
+        log("ERROR: " + err.message);
       }
     }
 
-    let frameCount = 0;
-
     // -----------------------------
-    // Draw results + arm detection
+    // Manual frame loop with throttling
     // -----------------------------
-    function onResults(results) {
+    function processFrame() {
       frameCount++;
-      if(frameCount <= 3) {
-        log("onResults called, frame #" + frameCount);
-        log("Has landmarks: " + !!results.poseLandmarks);
+
+      // Only process every 3rd frame to reduce load
+      if (frameCount % 3 === 0 && !isProcessing && pose && video.videoWidth > 0) {
+        isProcessing = true;
+        pose.send({ image: video }).then(() => {
+          isProcessing = false;
+        }).catch(err => {
+          isProcessing = false;
+          log("Send err: " + err.message);
+        });
       }
 
-      ctx.save();
+      requestAnimationFrame(processFrame);
+    }
+
+    // -----------------------------
+    // Draw results
+    // -----------------------------
+    function onResults(results) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
-      if(results.poseLandmarks) {
-        if(frameCount <= 3) log("Drawing landmarks...");
-
+      if (results.poseLandmarks) {
+        // Simple landmark drawing
         drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
-        drawLandmarks(ctx, results.poseLandmarks, {color: '#FF0000', lineWidth: 1, radius: 3});
+        drawLandmarks(ctx, results.poseLandmarks, {color: '#FF0000', radius: 3});
 
+        // Arm detection
         const leftWrist = results.poseLandmarks[15];
         const rightWrist = results.poseLandmarks[16];
         const leftShoulder = results.poseLandmarks[11];
         const rightShoulder = results.poseLandmarks[12];
 
-        const leftStatus = leftWrist.y < leftShoulder.y ? "LEFT: ABOVE" : "LEFT: BELOW";
-        const rightStatus = rightWrist.y < rightShoulder.y ? "RIGHT: ABOVE" : "RIGHT: BELOW";
+        const leftStatus = leftWrist.y < leftShoulder.y ? "L: UP" : "L: DOWN";
+        const rightStatus = rightWrist.y < rightShoulder.y ? "R: UP" : "R: DOWN";
 
-        ctx.fillStyle = "yellow";
-        ctx.font = "32px Arial";
-        ctx.fillText(leftStatus, 20, 40);
-        ctx.fillText(rightStatus, 20, 80);
+        statusEl.textContent = leftStatus + " | " + rightStatus;
+      } else {
+        statusEl.textContent = "No pose detected";
       }
-
-      ctx.restore();
     }
   </script>
 
