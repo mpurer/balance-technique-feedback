@@ -2,54 +2,372 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slackline Arm Detection MVP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Gibbon Training</title>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: black;
+    :root {
+      --primary: #E8FC66;
+      --dark: #1a1a1a;
+      --darker: #0d0d0d;
+      --text: #ffffff;
+      --text-dark: #1a1a1a;
     }
-    video {
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--darker);
+      color: var(--text);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== LANDSCAPE WARNING ===== */
+    #landscape-warning {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--darker);
+      z-index: 10000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+    }
+
+    #landscape-warning.show {
+      display: flex;
+    }
+
+    .rotate-icon {
+      width: 80px;
+      height: 80px;
+      border: 3px solid var(--primary);
+      border-radius: 12px;
+      position: relative;
+      animation: rotate-phone 1.5s ease-in-out infinite;
+    }
+
+    .rotate-icon::after {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 4px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    @keyframes rotate-phone {
+      0%, 100% { transform: rotate(90deg); }
+      50% { transform: rotate(0deg); }
+    }
+
+    #landscape-warning p {
+      font-size: 18px;
+      color: var(--text);
+      text-align: center;
+      padding: 0 40px;
+    }
+
+    /* ===== MENU SCREEN ===== */
+    #menu-screen {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 60px 24px 40px;
+    }
+
+    #menu-screen.hidden {
       display: none;
     }
-    canvas {
+
+    .menu-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .menu-header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .menu-header p {
+      font-size: 14px;
+      color: #888;
+    }
+
+    .menu-options {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .menu-btn {
+      background: var(--dark);
+      border: 2px solid transparent;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .menu-btn:active {
+      transform: scale(0.98);
+    }
+
+    .menu-btn:hover, .menu-btn:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+
+    .menu-btn h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .menu-btn p {
+      font-size: 14px;
+      color: #888;
+    }
+
+    .menu-btn.primary {
+      background: var(--primary);
+    }
+
+    .menu-btn.primary h2,
+    .menu-btn.primary p {
+      color: var(--text-dark);
+    }
+
+    .menu-btn.primary p {
+      opacity: 0.7;
+    }
+
+    /* ===== MODE SCREENS ===== */
+    .mode-screen {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--darker);
+    }
+
+    .mode-screen.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mode-header {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      background: var(--dark);
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 8px;
+      margin-right: 12px;
+    }
+
+    .mode-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* ===== COMING SOON ===== */
+    .coming-soon {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .coming-soon-icon {
+      width: 80px;
+      height: 80px;
+      border: 3px dashed #444;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    .coming-soon h3 {
+      font-size: 24px;
+      color: var(--text);
+    }
+
+    .coming-soon p {
+      font-size: 14px;
+      color: #666;
+    }
+
+    /* ===== BALANCE MODE ===== */
+    #balance-mode .mode-content {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #balance-mode video {
+      display: none;
+    }
+
+    #balance-mode canvas {
       width: 100%;
-      height: auto;
+      height: 100%;
+      object-fit: cover;
       transform: scaleX(-1);
     }
-    #debug {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      right: 10px;
-      background: rgba(0,0,0,0.8);
-      color: lime;
-      font-family: monospace;
-      font-size: 12px;
-      padding: 10px;
-      max-height: 100px;
-      overflow-y: auto;
-      z-index: 9999;
+
+    #balance-status {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
     }
-    #status {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      color: yellow;
-      font-family: Arial;
-      font-size: 24px;
-      z-index: 9999;
-      text-shadow: 2px 2px 4px black;
+
+    #balance-status .status-text {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    #debug {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      background: rgba(0,0,0,0.8);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 12px;
+      border-radius: 8px;
+      max-height: 80px;
+      overflow-y: auto;
     }
   </style>
 </head>
 <body>
 
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas"></canvas>
-  <div id="status">Loading...</div>
-  <div id="debug">Debug:</div>
+  <!-- Landscape Warning -->
+  <div id="landscape-warning">
+    <div class="rotate-icon"></div>
+    <p>Rotate phone to vertical position</p>
+  </div>
+
+  <!-- Menu Screen -->
+  <div id="menu-screen">
+    <div class="menu-header">
+      <h1>Gibbon Training</h1>
+      <p>Select your workout mode</p>
+    </div>
+    <div class="menu-options">
+      <button class="menu-btn primary" onclick="openMode('balance')">
+        <h2>Balance Control</h2>
+        <p>Track your arm positions for balance training</p>
+      </button>
+      <button class="menu-btn" onclick="openMode('squat')">
+        <h2>Squat Reps</h2>
+        <p>Count and track your squat repetitions</p>
+      </button>
+      <button class="menu-btn" onclick="openMode('plank')">
+        <h2>Plank Hold</h2>
+        <p>Time your plank with form feedback</p>
+      </button>
+      <button class="menu-btn" onclick="openMode('pushup')">
+        <h2>Push-up Reps</h2>
+        <p>Count and track your push-up repetitions</p>
+      </button>
+    </div>
+  </div>
+
+  <!-- Balance Mode -->
+  <div id="balance-mode" class="mode-screen">
+    <div class="mode-header">
+      <button class="back-btn" onclick="goBack()">← Back</button>
+      <h2>Balance Control</h2>
+    </div>
+    <div class="mode-content">
+      <video id="video" autoplay playsinline></video>
+      <canvas id="canvas"></canvas>
+      <div id="balance-status">
+        <div class="status-text">Loading...</div>
+      </div>
+      <div id="debug">Debug:</div>
+    </div>
+  </div>
+
+  <!-- Squat Mode -->
+  <div id="squat-mode" class="mode-screen">
+    <div class="mode-header">
+      <button class="back-btn" onclick="goBack()">← Back</button>
+      <h2>Squat Reps</h2>
+    </div>
+    <div class="coming-soon">
+      <div class="coming-soon-icon">🏋️</div>
+      <h3>Coming Soon</h3>
+      <p>This feature is under development</p>
+    </div>
+  </div>
+
+  <!-- Plank Mode -->
+  <div id="plank-mode" class="mode-screen">
+    <div class="mode-header">
+      <button class="back-btn" onclick="goBack()">← Back</button>
+      <h2>Plank Hold</h2>
+    </div>
+    <div class="coming-soon">
+      <div class="coming-soon-icon">💪</div>
+      <h3>Coming Soon</h3>
+      <p>This feature is under development</p>
+    </div>
+  </div>
+
+  <!-- Push-up Mode -->
+  <div id="pushup-mode" class="mode-screen">
+    <div class="mode-header">
+      <button class="back-btn" onclick="goBack()">← Back</button>
+      <h2>Push-up Reps</h2>
+    </div>
+    <div class="coming-soon">
+      <div class="coming-soon-icon">🔥</div>
+      <h3>Coming Soon</h3>
+      <p>This feature is under development</p>
+    </div>
+  </div>
 
   <!-- Mediapipe Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -57,11 +375,50 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 
   <script>
+    // ===== LANDSCAPE DETECTION =====
+    const landscapeWarning = document.getElementById('landscape-warning');
+
+    function checkOrientation() {
+      if (window.innerWidth > window.innerHeight) {
+        landscapeWarning.classList.add('show');
+      } else {
+        landscapeWarning.classList.remove('show');
+      }
+    }
+
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    checkOrientation();
+
+    // ===== NAVIGATION =====
+    const menuScreen = document.getElementById('menu-screen');
+    let currentMode = null;
+    let poseInitialized = false;
+
+    function openMode(mode) {
+      menuScreen.classList.add('hidden');
+      document.getElementById(mode + '-mode').classList.add('active');
+      currentMode = mode;
+
+      if (mode === 'balance' && !poseInitialized) {
+        initBalanceMode();
+      }
+    }
+
+    function goBack() {
+      if (currentMode) {
+        document.getElementById(currentMode + '-mode').classList.remove('active');
+        currentMode = null;
+      }
+      menuScreen.classList.remove('hidden');
+    }
+
+    // ===== BALANCE MODE =====
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     const debugEl = document.getElementById("debug");
-    const statusEl = document.getElementById("status");
+    const statusEl = document.querySelector("#balance-status .status-text");
 
     let debugLines = [];
     function log(msg) {
@@ -71,48 +428,45 @@
       debugEl.textContent = debugLines.join("\n");
     }
 
-    log("Starting...");
-
-    // -----------------------------
-    // Start camera with LOW resolution
-    // -----------------------------
-    navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "user",
-        width: { ideal: 320 },
-        height: { ideal: 240 }
-      }
-    })
-    .then(stream => {
-      log("Camera OK");
-      video.srcObject = stream;
-
-      video.onloadedmetadata = () => {
-        log("Metadata: " + video.videoWidth + "x" + video.videoHeight);
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        // Explicitly play video (required on mobile)
-        video.play().then(() => {
-          log("Video playing");
-          startPose();
-        }).catch(err => {
-          log("Play error: " + err.message);
-          // Try starting anyway
-          startPose();
-        });
-      };
-    })
-    .catch(err => {
-      log("Camera error: " + err.message);
-    });
-
-    // -----------------------------
-    // Initialize Mediapipe Pose - LITE model
-    // -----------------------------
     let pose = null;
     let isProcessing = false;
     let frameCount = 0;
+    let latestLandmarks = null;
+
+    function initBalanceMode() {
+      log("Starting...");
+      poseInitialized = true;
+
+      navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 320 },
+          height: { ideal: 240 }
+        }
+      })
+      .then(stream => {
+        log("Camera OK");
+        video.srcObject = stream;
+
+        video.onloadedmetadata = () => {
+          log("Video: " + video.videoWidth + "x" + video.videoHeight);
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+
+          video.play().then(() => {
+            log("Video playing");
+            startPose();
+          }).catch(err => {
+            log("Play error: " + err.message);
+            startPose();
+          });
+        };
+      })
+      .catch(err => {
+        log("Camera error: " + err.message);
+        statusEl.textContent = "Camera access denied";
+      });
+    }
 
     function startPose() {
       log("Init Pose (lite)...");
@@ -123,7 +477,7 @@
         });
 
         pose.setOptions({
-          modelComplexity: 0,  // LITE model for mobile
+          modelComplexity: 0,
           smoothLandmarks: true,
           minDetectionConfidence: 0.5,
           minTrackingConfidence: 0.5
@@ -131,13 +485,11 @@
 
         pose.onResults(onResults);
 
-        // Initialize pose with a single frame first
         pose.initialize().then(() => {
           log("Pose ready!");
           requestAnimationFrame(processFrame);
         }).catch(err => {
           log("Init error: " + err.message);
-          // Try anyway
           requestAnimationFrame(processFrame);
         });
 
@@ -146,32 +498,24 @@
       }
     }
 
-    // Store latest pose results
-    let latestLandmarks = null;
-
-    // -----------------------------
-    // Manual frame loop with throttling
-    // -----------------------------
     function processFrame() {
+      if (currentMode !== 'balance') return;
+
       frameCount++;
 
-      // Log video state once
       if (frameCount === 10) {
         log("paused:" + video.paused + " ready:" + video.readyState);
       }
 
-      // Always draw video to canvas for smooth preview
       if (video.readyState >= 2 && video.videoWidth > 0) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Draw stored landmarks on top
         if (latestLandmarks) {
-          drawConnectors(ctx, latestLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
-          drawLandmarks(ctx, latestLandmarks, {color: '#FF0000', radius: 3});
+          drawConnectors(ctx, latestLandmarks, POSE_CONNECTIONS, {color: '#E8FC66', lineWidth: 2});
+          drawLandmarks(ctx, latestLandmarks, {color: '#ffffff', radius: 3});
         }
       }
 
-      // Only send to pose detection every 3rd frame to reduce load
       if (frameCount % 3 === 0 && !isProcessing && pose && video.videoWidth > 0) {
         isProcessing = true;
         pose.send({ image: video }).then(() => {
@@ -185,15 +529,10 @@
       requestAnimationFrame(processFrame);
     }
 
-    // -----------------------------
-    // Handle pose results
-    // -----------------------------
     function onResults(results) {
       if (results.poseLandmarks) {
-        // Store landmarks for continuous drawing
         latestLandmarks = results.poseLandmarks;
 
-        // Arm detection
         const leftWrist = results.poseLandmarks[15];
         const rightWrist = results.poseLandmarks[16];
         const leftShoulder = results.poseLandmarks[11];
