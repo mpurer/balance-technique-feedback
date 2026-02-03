@@ -422,8 +422,19 @@
         if (!poseInitialized) {
           initBalanceMode();
         } else {
-          // Restart the frame loop when re-entering balance mode
-          requestAnimationFrame(processFrame);
+          // Check if camera stream is still active
+          const stream = video.srcObject;
+          const isStreamActive = stream && stream.getTracks().some(track => track.readyState === 'live');
+
+          if (!isStreamActive) {
+            // Camera was stopped, reinitialize
+            log("Restarting camera...");
+            poseInitialized = false;
+            initBalanceMode();
+          } else {
+            // Restart the frame loop when re-entering balance mode
+            requestAnimationFrame(processFrame);
+          }
         }
       }
     }
