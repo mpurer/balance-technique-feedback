@@ -418,8 +418,13 @@
       document.getElementById(mode + '-mode').classList.add('active');
       currentMode = mode;
 
-      if (mode === 'balance' && !poseInitialized) {
-        initBalanceMode();
+      if (mode === 'balance') {
+        if (!poseInitialized) {
+          initBalanceMode();
+        } else {
+          // Restart the frame loop when re-entering balance mode
+          requestAnimationFrame(processFrame);
+        }
       }
     }
 
