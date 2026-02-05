@@ -566,6 +566,189 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
     }
+
+    /* ===== DASHBOARD ===== */
+    #dashboard-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--darker);
+      z-index: 300;
+      overflow-y: auto;
+      padding: 24px;
+      padding-bottom: 40px;
+    }
+
+    #dashboard-overlay.hidden {
+      display: none;
+    }
+
+    .dashboard-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .dashboard-header h3 {
+      font-size: 24px;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .dashboard-header p {
+      font-size: 14px;
+      color: #888;
+    }
+
+    .dashboard-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--dark);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .stat-card.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .stat-card .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .stat-card .stat-label {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .stat-card.left-arm .stat-value {
+      color: #4ECDC4;
+    }
+
+    .stat-card.right-arm .stat-value {
+      color: #FF6B6B;
+    }
+
+    .chart-container {
+      background: var(--dark);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .chart-header h4 {
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #888;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.left {
+      background: #4ECDC4;
+    }
+
+    .legend-dot.right {
+      background: #FF6B6B;
+    }
+
+    #arm-chart {
+      width: 100%;
+      height: 200px;
+      background: var(--darker);
+      border-radius: 8px;
+    }
+
+    .chart-note {
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    .dashboard-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .dashboard-btn {
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .dashboard-btn:active {
+      transform: scale(0.97);
+    }
+
+    .dashboard-btn.primary {
+      background: var(--primary);
+      color: var(--text-dark);
+    }
+
+    .dashboard-btn.secondary {
+      background: var(--dark);
+      color: var(--text);
+      border: 2px solid #333;
+    }
+
+    .warning-note {
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .warning-note p {
+      font-size: 13px;
+      color: #FF6B6B;
+      text-align: center;
+    }
+
+    .warning-note .warning-time {
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
@@ -662,6 +845,56 @@
         <button id="stop-btn" onclick="stopBalanceMeasurement()">Stop</button>
       </div>
 
+      <!-- Dashboard Overlay -->
+      <div id="dashboard-overlay" class="hidden">
+        <div class="dashboard-header">
+          <h3>Session Complete</h3>
+          <p>Here's your balance training summary</p>
+        </div>
+
+        <div id="warning-note" class="warning-note hidden">
+          <p>Tracking paused for <span id="warning-time-display" class="warning-time">0s</span> due to body parts out of frame</p>
+        </div>
+
+        <div class="dashboard-stats">
+          <div class="stat-card full-width">
+            <div class="stat-value" id="total-time-display">0:00</div>
+            <div class="stat-label">Training Time</div>
+          </div>
+          <div class="stat-card left-arm">
+            <div class="stat-value" id="left-arm-time-display">0:00</div>
+            <div class="stat-label">Left Arm Up</div>
+          </div>
+          <div class="stat-card right-arm">
+            <div class="stat-value" id="right-arm-time-display">0:00</div>
+            <div class="stat-label">Right Arm Up</div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-header">
+            <h4>Arm Movement Timeline</h4>
+            <div class="chart-legend">
+              <div class="legend-item">
+                <div class="legend-dot left"></div>
+                <span>Left</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-dot right"></div>
+                <span>Right</span>
+              </div>
+            </div>
+          </div>
+          <canvas id="arm-chart"></canvas>
+          <div class="chart-note">Gray areas indicate paused tracking (body out of frame)</div>
+        </div>
+
+        <div class="dashboard-actions">
+          <button class="dashboard-btn primary" onclick="restartBalance()">Start New Session</button>
+          <button class="dashboard-btn secondary" onclick="closeDashboard()">Back to Menu</button>
+        </div>
+      </div>
+
       <div id="debug">Debug:</div>
     </div>
   </div>
@@ -750,8 +983,15 @@
       stopBtnContainer.classList.add('hidden');
       bodyWarnings.classList.add('hidden');
       cameraCheckOverlay.classList.add('hidden');
+      document.getElementById('dashboard-overlay').classList.add('hidden');
       latestLandmarks = null;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Reset session data
+      sessionStartTime = null;
+      sessionEndTime = null;
+      armData = [];
+      currentWarnings = [];
     }
 
     function goBack() {
@@ -798,8 +1038,16 @@
     let isProcessing = false;
     let frameCount = 0;
     let latestLandmarks = null;
-    let balanceState = 'start'; // 'start', 'camera-check', 'countdown', 'measuring'
+    let balanceState = 'start'; // 'start', 'camera-check', 'countdown', 'measuring', 'dashboard'
     let cameraCheckStream = null;
+
+    // Session tracking data
+    let sessionStartTime = null;
+    let sessionEndTime = null;
+    let armData = []; // Array of {time, leftUp, rightUp, hasWarning}
+    let currentWarnings = [];
+    let lastDataTime = null;
+    const DATA_INTERVAL = 100; // Record data every 100ms
 
     // Camera Check Functions
     function openCameraCheck() {
@@ -871,6 +1119,13 @@
       stopBtnContainer.classList.remove('hidden');
       bodyWarnings.classList.remove('hidden');
 
+      // Initialize session tracking
+      sessionStartTime = Date.now();
+      sessionEndTime = null;
+      armData = [];
+      currentWarnings = [];
+      lastDataTime = sessionStartTime;
+
       if (!poseInitialized) {
         initBalanceMode();
       } else {
@@ -889,15 +1144,198 @@
 
     function stopBalanceMeasurement() {
       log("Stopping measurement");
-      balanceState = 'start';
+      sessionEndTime = Date.now();
+      balanceState = 'dashboard';
       balanceStatus.classList.add('hidden');
       stopBtnContainer.classList.add('hidden');
       bodyWarnings.classList.add('hidden');
-      balanceStartScreen.classList.remove('hidden');
       latestLandmarks = null;
 
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Show dashboard
+      showDashboard();
+    }
+
+    // Dashboard Functions
+    const dashboardOverlay = document.getElementById('dashboard-overlay');
+
+    function showDashboard() {
+      dashboardOverlay.classList.remove('hidden');
+
+      // Calculate statistics
+      const stats = calculateSessionStats();
+
+      // Update display
+      document.getElementById('total-time-display').textContent = formatTime(stats.totalTime);
+      document.getElementById('left-arm-time-display').textContent = formatTime(stats.leftArmUpTime);
+      document.getElementById('right-arm-time-display').textContent = formatTime(stats.rightArmUpTime);
+
+      // Show warning note if there was paused time
+      const warningNote = document.getElementById('warning-note');
+      if (stats.pausedTime > 0) {
+        warningNote.classList.remove('hidden');
+        document.getElementById('warning-time-display').textContent = formatTime(stats.pausedTime);
+      } else {
+        warningNote.classList.add('hidden');
+      }
+
+      // Draw chart
+      drawArmChart();
+    }
+
+    function calculateSessionStats() {
+      const totalTime = sessionEndTime - sessionStartTime;
+      let leftArmUpTime = 0;
+      let rightArmUpTime = 0;
+      let pausedTime = 0;
+
+      for (let i = 1; i < armData.length; i++) {
+        const prev = armData[i - 1];
+        const curr = armData[i];
+        const duration = curr.time - prev.time;
+
+        if (prev.hasWarning) {
+          pausedTime += duration;
+        } else {
+          if (prev.leftUp) leftArmUpTime += duration;
+          if (prev.rightUp) rightArmUpTime += duration;
+        }
+      }
+
+      return {
+        totalTime,
+        leftArmUpTime,
+        rightArmUpTime,
+        pausedTime
+      };
+    }
+
+    function formatTime(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function drawArmChart() {
+      const chartCanvas = document.getElementById('arm-chart');
+      const chartCtx = chartCanvas.getContext('2d');
+
+      // Set canvas size
+      const rect = chartCanvas.getBoundingClientRect();
+      chartCanvas.width = rect.width * window.devicePixelRatio;
+      chartCanvas.height = rect.height * window.devicePixelRatio;
+      chartCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+      const width = rect.width;
+      const height = rect.height;
+      const padding = { top: 20, right: 20, bottom: 30, left: 40 };
+      const chartWidth = width - padding.left - padding.right;
+      const chartHeight = height - padding.top - padding.bottom;
+
+      // Clear canvas
+      chartCtx.fillStyle = '#0d0d0d';
+      chartCtx.fillRect(0, 0, width, height);
+
+      if (armData.length < 2) {
+        chartCtx.fillStyle = '#666';
+        chartCtx.font = '14px -apple-system, sans-serif';
+        chartCtx.textAlign = 'center';
+        chartCtx.fillText('Not enough data', width / 2, height / 2);
+        return;
+      }
+
+      const startTime = armData[0].time;
+      const endTime = armData[armData.length - 1].time;
+      const timeRange = endTime - startTime;
+
+      // Draw warning zones (gray areas)
+      chartCtx.fillStyle = 'rgba(100, 100, 100, 0.3)';
+      for (let i = 0; i < armData.length - 1; i++) {
+        if (armData[i].hasWarning) {
+          const x1 = padding.left + ((armData[i].time - startTime) / timeRange) * chartWidth;
+          const x2 = padding.left + ((armData[i + 1].time - startTime) / timeRange) * chartWidth;
+          chartCtx.fillRect(x1, padding.top, x2 - x1, chartHeight);
+        }
+      }
+
+      // Draw grid lines
+      chartCtx.strokeStyle = '#333';
+      chartCtx.lineWidth = 1;
+
+      // Horizontal grid (UP/DOWN)
+      const midY = padding.top + chartHeight / 2;
+      chartCtx.beginPath();
+      chartCtx.moveTo(padding.left, midY);
+      chartCtx.lineTo(width - padding.right, midY);
+      chartCtx.stroke();
+
+      // Y-axis labels
+      chartCtx.fillStyle = '#666';
+      chartCtx.font = '11px -apple-system, sans-serif';
+      chartCtx.textAlign = 'right';
+      chartCtx.fillText('UP', padding.left - 8, padding.top + 15);
+      chartCtx.fillText('DOWN', padding.left - 8, height - padding.bottom - 5);
+
+      // X-axis labels (time)
+      chartCtx.textAlign = 'center';
+      const totalSeconds = Math.ceil(timeRange / 1000);
+      const tickInterval = Math.max(1, Math.ceil(totalSeconds / 6));
+      for (let s = 0; s <= totalSeconds; s += tickInterval) {
+        const x = padding.left + (s / (timeRange / 1000)) * chartWidth;
+        chartCtx.fillText(`${s}s`, x, height - 8);
+      }
+
+      // Draw left arm line
+      chartCtx.strokeStyle = '#4ECDC4';
+      chartCtx.lineWidth = 2;
+      chartCtx.beginPath();
+      let firstPoint = true;
+      for (const point of armData) {
+        if (point.hasWarning) continue;
+        const x = padding.left + ((point.time - startTime) / timeRange) * chartWidth;
+        const y = point.leftUp ? padding.top + 10 : height - padding.bottom - 10;
+        if (firstPoint) {
+          chartCtx.moveTo(x, y);
+          firstPoint = false;
+        } else {
+          chartCtx.lineTo(x, y);
+        }
+      }
+      chartCtx.stroke();
+
+      // Draw right arm line
+      chartCtx.strokeStyle = '#FF6B6B';
+      chartCtx.lineWidth = 2;
+      chartCtx.beginPath();
+      firstPoint = true;
+      for (const point of armData) {
+        if (point.hasWarning) continue;
+        const x = padding.left + ((point.time - startTime) / timeRange) * chartWidth;
+        const y = point.rightUp ? padding.top + 10 : height - padding.bottom - 10;
+        if (firstPoint) {
+          chartCtx.moveTo(x, y);
+          firstPoint = false;
+        } else {
+          chartCtx.lineTo(x, y);
+        }
+      }
+      chartCtx.stroke();
+    }
+
+    function restartBalance() {
+      dashboardOverlay.classList.add('hidden');
+      balanceState = 'start';
+      balanceStartScreen.classList.remove('hidden');
+      // Immediately start countdown for new session
+      startBalanceCountdown();
+    }
+
+    function closeDashboard() {
+      dashboardOverlay.classList.add('hidden');
+      goBack();
     }
 
     function initBalanceMode() {
@@ -1074,25 +1512,48 @@
     function onResults(results) {
       if (balanceState !== 'measuring') return;
 
+      const now = Date.now();
+      let leftUp = false;
+      let rightUp = false;
+      let hasWarning = false;
+
       if (results.poseLandmarks) {
         latestLandmarks = results.poseLandmarks;
 
         // Check body visibility and show warnings
         const warnings = checkBodyVisibility(results.poseLandmarks);
+        currentWarnings = warnings;
         updateBodyWarnings(warnings);
+        hasWarning = warnings.length > 0;
 
         const leftWrist = results.poseLandmarks[15];
         const rightWrist = results.poseLandmarks[16];
         const leftShoulder = results.poseLandmarks[11];
         const rightShoulder = results.poseLandmarks[12];
 
-        const leftStatus = leftWrist.y < leftShoulder.y ? "L: UP" : "L: DOWN";
-        const rightStatus = rightWrist.y < rightShoulder.y ? "R: UP" : "R: DOWN";
+        leftUp = leftWrist.y < leftShoulder.y;
+        rightUp = rightWrist.y < rightShoulder.y;
+
+        const leftStatus = leftUp ? "L: UP" : "L: DOWN";
+        const rightStatus = rightUp ? "R: UP" : "R: DOWN";
 
         statusEl.textContent = leftStatus + " | " + rightStatus;
       } else {
         statusEl.textContent = "No pose detected";
         updateBodyWarnings(['Step into frame - no body detected']);
+        hasWarning = true;
+        currentWarnings = ['No pose detected'];
+      }
+
+      // Record data at regular intervals
+      if (now - lastDataTime >= DATA_INTERVAL) {
+        armData.push({
+          time: now,
+          leftUp: leftUp,
+          rightUp: rightUp,
+          hasWarning: hasWarning
+        });
+        lastDataTime = now;
       }
     }
 
