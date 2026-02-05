@@ -537,6 +537,60 @@
       transform: scale(0.95);
     }
 
+    /* ===== BOARD STATUS INDICATOR ===== */
+    #board-status {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 20px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 65;
+    }
+
+    #board-status.hidden {
+      display: none;
+    }
+
+    #board-status .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #666;
+      transition: background 0.3s ease;
+    }
+
+    #board-status.on-board .status-dot {
+      background: #4ECDC4;
+      box-shadow: 0 0 8px #4ECDC4;
+    }
+
+    #board-status.off-board .status-dot {
+      background: #FF6B6B;
+      box-shadow: 0 0 8px #FF6B6B;
+    }
+
+    #board-status.calibrating .status-dot {
+      background: #E8FC66;
+      animation: calibratePulse 1s ease-in-out infinite;
+    }
+
+    @keyframes calibratePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    #board-status .status-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     /* ===== BODY WARNINGS ===== */
     #body-warnings {
       position: absolute;
@@ -837,6 +891,12 @@
         <div class="status-text">Loading...</div>
       </div>
 
+      <!-- Board Status Indicator -->
+      <div id="board-status" class="hidden calibrating">
+        <div class="status-dot"></div>
+        <div class="status-label">Calibrating...</div>
+      </div>
+
       <!-- Body Warnings -->
       <div id="body-warnings" class="hidden"></div>
 
@@ -984,6 +1044,7 @@
       bodyWarnings.classList.add('hidden');
       cameraCheckOverlay.classList.add('hidden');
       document.getElementById('dashboard-overlay').classList.add('hidden');
+      document.getElementById('board-status').classList.add('hidden');
       latestLandmarks = null;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -992,6 +1053,9 @@
       sessionEndTime = null;
       armData = [];
       currentWarnings = [];
+
+      // Reset board detection
+      resetBoardDetection();
     }
 
     function goBack() {
@@ -1048,6 +1112,21 @@
     let currentWarnings = [];
     let lastDataTime = null;
     const DATA_INTERVAL = 100; // Record data every 100ms
+
+    // Board detection variables
+    const boardStatusEl = document.getElementById('board-status');
+    const boardStatusLabel = boardStatusEl.querySelector('.status-label');
+    let isOnBoard = false;
+    let boardCalibrated = false;
+    let baselineHipY = null; // Ground level hip position
+    let hipYHistory = []; // Recent hip Y values for smoothing
+    let stableHipY = null; // Smoothed hip Y position
+    const HIP_HISTORY_SIZE = 10; // Number of frames to average
+    const BOARD_THRESHOLD = 0.03; // 3% of frame height difference to detect board
+    const VELOCITY_THRESHOLD = 0.008; // Minimum velocity to trigger state change
+    const STABILITY_FRAMES = 8; // Frames to wait for stability confirmation
+    let stabilityCounter = 0;
+    let pendingBoardState = null;
 
     // Camera Check Functions
     function openCameraCheck() {
@@ -1118,6 +1197,7 @@
       balanceStatus.classList.remove('hidden');
       stopBtnContainer.classList.remove('hidden');
       bodyWarnings.classList.remove('hidden');
+      boardStatusEl.classList.remove('hidden');
 
       // Initialize session tracking
       sessionStartTime = Date.now();
@@ -1125,6 +1205,9 @@
       armData = [];
       currentWarnings = [];
       lastDataTime = sessionStartTime;
+
+      // Reset board detection for new session
+      resetBoardDetection();
 
       if (!poseInitialized) {
         initBalanceMode();
@@ -1149,6 +1232,7 @@
       balanceStatus.classList.add('hidden');
       stopBtnContainer.classList.add('hidden');
       bodyWarnings.classList.add('hidden');
+      boardStatusEl.classList.add('hidden');
       latestLandmarks = null;
 
       // Clear canvas
@@ -1509,6 +1593,119 @@
         .join('');
     }
 
+    // Board Detection Functions
+    function resetBoardDetection() {
+      isOnBoard = false;
+      boardCalibrated = false;
+      baselineHipY = null;
+      hipYHistory = [];
+      stableHipY = null;
+      stabilityCounter = 0;
+      pendingBoardState = null;
+      updateBoardStatusUI('calibrating');
+    }
+
+    function getHipMidpointY(landmarks) {
+      const leftHip = landmarks[23];
+      const rightHip = landmarks[24];
+      if (!leftHip || !rightHip) return null;
+      return (leftHip.y + rightHip.y) / 2;
+    }
+
+    function updateHipTracking(hipY) {
+      // Add to history
+      hipYHistory.push(hipY);
+      if (hipYHistory.length > HIP_HISTORY_SIZE) {
+        hipYHistory.shift();
+      }
+
+      // Calculate smoothed value
+      if (hipYHistory.length >= 3) {
+        stableHipY = hipYHistory.reduce((a, b) => a + b, 0) / hipYHistory.length;
+      }
+
+      return stableHipY;
+    }
+
+    function detectBoardState(currentHipY) {
+      if (currentHipY === null) return;
+
+      const smoothedY = updateHipTracking(currentHipY);
+      if (smoothedY === null) return;
+
+      // Auto-calibration: set baseline after collecting enough data
+      if (!boardCalibrated && hipYHistory.length >= HIP_HISTORY_SIZE) {
+        baselineHipY = smoothedY;
+        boardCalibrated = true;
+        log("Board calibrated. Baseline Y: " + baselineHipY.toFixed(3));
+        updateBoardStatusUI('off-board');
+        return;
+      }
+
+      if (!boardCalibrated) return;
+
+      // Calculate velocity (change from previous smoothed value)
+      const prevY = hipYHistory.length > 1 ? hipYHistory[hipYHistory.length - 2] : smoothedY;
+      const velocity = smoothedY - prevY;
+
+      // Calculate position relative to baseline
+      // Note: Y increases downward, so being ON board means Y is LESS than baseline
+      const heightDiff = baselineHipY - smoothedY;
+
+      // Determine expected state based on height
+      let expectedState;
+      if (heightDiff > BOARD_THRESHOLD) {
+        expectedState = true; // ON board (elevated)
+      } else if (heightDiff < -BOARD_THRESHOLD * 0.5) {
+        expectedState = false; // OFF board (at or below baseline)
+      } else {
+        expectedState = isOnBoard; // In dead zone, keep current state
+      }
+
+      // Check for significant velocity (movement)
+      const hasSignificantMovement = Math.abs(velocity) > VELOCITY_THRESHOLD;
+
+      // State change logic with stability confirmation
+      if (expectedState !== isOnBoard) {
+        if (pendingBoardState === expectedState) {
+          stabilityCounter++;
+          if (stabilityCounter >= STABILITY_FRAMES && !hasSignificantMovement) {
+            // Confirmed state change
+            isOnBoard = expectedState;
+            pendingBoardState = null;
+            stabilityCounter = 0;
+            log("Board state: " + (isOnBoard ? "ON" : "OFF") + " (diff: " + heightDiff.toFixed(3) + ")");
+            updateBoardStatusUI(isOnBoard ? 'on-board' : 'off-board');
+          }
+        } else {
+          // Start tracking new potential state
+          pendingBoardState = expectedState;
+          stabilityCounter = 1;
+        }
+      } else {
+        // Reset pending state if we're back to current state
+        pendingBoardState = null;
+        stabilityCounter = 0;
+      }
+    }
+
+    function updateBoardStatusUI(state) {
+      boardStatusEl.classList.remove('calibrating', 'on-board', 'off-board');
+      boardStatusEl.classList.add(state);
+
+      switch(state) {
+        case 'calibrating':
+          boardStatusLabel.textContent = 'Calibrating...';
+          break;
+        case 'on-board':
+          boardStatusLabel.textContent = 'On Board';
+          break;
+        case 'off-board':
+          boardStatusLabel.textContent = 'Off Board';
+          break;
+      }
+    }
+
     function onResults(results) {
       if (balanceState !== 'measuring') return;
 
@@ -1525,6 +1722,12 @@
         currentWarnings = warnings;
         updateBodyWarnings(warnings);
         hasWarning = warnings.length > 0;
+
+        // Board detection (only when no warnings)
+        if (!hasWarning) {
+          const hipY = getHipMidpointY(results.poseLandmarks);
+          detectBoardState(hipY);
+        }
 
         const leftWrist = results.poseLandmarks[15];
         const rightWrist = results.poseLandmarks[16];
