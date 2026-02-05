@@ -282,6 +282,10 @@
       color: var(--primary);
     }
 
+    #balance-status.hidden {
+      display: none;
+    }
+
     #debug {
       position: absolute;
       bottom: 16px;
@@ -295,6 +299,269 @@
       border-radius: 8px;
       max-height: 80px;
       overflow-y: auto;
+    }
+
+    /* ===== BALANCE START SCREEN ===== */
+    #balance-start-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--darker);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      z-index: 100;
+    }
+
+    #balance-start-screen.hidden {
+      display: none;
+    }
+
+    .start-icon {
+      width: 100px;
+      height: 100px;
+      border: 3px solid var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+
+    .start-icon svg {
+      width: 50px;
+      height: 50px;
+      fill: var(--primary);
+    }
+
+    .start-description {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .start-description h3 {
+      font-size: 24px;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .start-description p {
+      font-size: 14px;
+      color: #888;
+      line-height: 1.6;
+      max-width: 300px;
+    }
+
+    .start-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .start-btn {
+      padding: 18px 32px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .start-btn:active {
+      transform: scale(0.97);
+    }
+
+    .start-btn.primary {
+      background: var(--primary);
+      color: var(--text-dark);
+    }
+
+    .start-btn.secondary {
+      background: var(--dark);
+      color: var(--text);
+      border: 2px solid #333;
+    }
+
+    .start-btn.secondary:hover {
+      border-color: var(--primary);
+    }
+
+    /* ===== COUNTDOWN OVERLAY ===== */
+    #countdown-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    #countdown-overlay.hidden {
+      display: none;
+    }
+
+    .countdown-number {
+      font-size: 150px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+      animation: countdownPulse 1s ease-in-out;
+    }
+
+    @keyframes countdownPulse {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .countdown-text {
+      font-size: 18px;
+      color: #888;
+      margin-top: 24px;
+    }
+
+    /* ===== CAMERA CHECK MODE ===== */
+    #camera-check-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 150;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #camera-check-overlay.hidden {
+      display: none;
+    }
+
+    #camera-check-overlay video {
+      flex: 1;
+      width: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .camera-check-ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      pointer-events: none;
+    }
+
+    .camera-check-hint {
+      background: rgba(0,0,0,0.7);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .camera-check-hint p {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .camera-check-frame {
+      flex: 1;
+      margin: 20px;
+      border: 3px dashed var(--primary);
+      border-radius: 16px;
+      opacity: 0.6;
+    }
+
+    .camera-check-exit {
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      pointer-events: auto;
+    }
+
+    .camera-check-exit button {
+      background: var(--primary);
+      color: var(--text-dark);
+      border: none;
+      padding: 16px 48px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ===== STOP BUTTON ===== */
+    #stop-btn-container {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+    }
+
+    #stop-btn-container.hidden {
+      display: none;
+    }
+
+    #stop-btn {
+      background: #ff4444;
+      color: white;
+      border: none;
+      padding: 16px 48px;
+      border-radius: 30px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(255, 68, 68, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    #stop-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* ===== BODY WARNINGS ===== */
+    #body-warnings {
+      position: absolute;
+      top: 80px;
+      left: 16px;
+      right: 16px;
+      z-index: 60;
+    }
+
+    #body-warnings.hidden {
+      display: none;
+    }
+
+    .warning-box {
+      background: rgba(255, 68, 68, 0.9);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 8px;
+      animation: warningPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes warningPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
     }
   </style>
 </head>
@@ -341,9 +608,57 @@
     <div class="mode-content">
       <video id="video" autoplay playsinline></video>
       <canvas id="canvas"></canvas>
-      <div id="balance-status">
+
+      <!-- Start Screen -->
+      <div id="balance-start-screen">
+        <div class="start-icon">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+        </div>
+        <div class="start-description">
+          <h3>Balance Training</h3>
+          <p>Position your slackboard where your <strong>whole body is visible</strong> in the camera frame. Make sure you have enough space around you.</p>
+        </div>
+        <div class="start-buttons">
+          <button class="start-btn primary" onclick="startBalanceCountdown()">Start</button>
+          <button class="start-btn secondary" onclick="openCameraCheck()">Check Camera Placement</button>
+        </div>
+      </div>
+
+      <!-- Camera Check Overlay -->
+      <div id="camera-check-overlay" class="hidden">
+        <video id="camera-check-video" autoplay playsinline></video>
+        <div class="camera-check-ui">
+          <div class="camera-check-hint">
+            <p>Make sure your <strong>entire body</strong> and the <strong>slackboard</strong> are visible within the frame</p>
+          </div>
+          <div class="camera-check-frame"></div>
+          <div class="camera-check-exit">
+            <button onclick="closeCameraCheck()">Done</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Countdown Overlay -->
+      <div id="countdown-overlay" class="hidden">
+        <div class="countdown-number" id="countdown-number">5</div>
+        <div class="countdown-text">Get ready on your slackboard...</div>
+      </div>
+
+      <!-- Balance Status (shown during measurement) -->
+      <div id="balance-status" class="hidden">
         <div class="status-text">Loading...</div>
       </div>
+
+      <!-- Body Warnings -->
+      <div id="body-warnings" class="hidden"></div>
+
+      <!-- Stop Button -->
+      <div id="stop-btn-container" class="hidden">
+        <button id="stop-btn" onclick="stopBalanceMeasurement()">Stop</button>
+      </div>
+
       <div id="debug">Debug:</div>
     </div>
   </div>
@@ -419,27 +734,33 @@
       currentMode = mode;
 
       if (mode === 'balance') {
-        if (!poseInitialized) {
-          initBalanceMode();
-        } else {
-          // Check if camera stream is still active
-          const stream = video.srcObject;
-          const isStreamActive = stream && stream.getTracks().some(track => track.readyState === 'live');
-
-          if (!isStreamActive) {
-            // Camera was stopped, reinitialize
-            log("Restarting camera...");
-            poseInitialized = false;
-            initBalanceMode();
-          } else {
-            // Restart the frame loop when re-entering balance mode
-            requestAnimationFrame(processFrame);
-          }
-        }
+        // Always show start screen when entering balance mode
+        resetBalanceUI();
       }
     }
 
+    function resetBalanceUI() {
+      balanceState = 'start';
+      balanceStartScreen.classList.remove('hidden');
+      countdownOverlay.classList.add('hidden');
+      balanceStatus.classList.add('hidden');
+      stopBtnContainer.classList.add('hidden');
+      bodyWarnings.classList.add('hidden');
+      cameraCheckOverlay.classList.add('hidden');
+      latestLandmarks = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
     function goBack() {
+      if (currentMode === 'balance') {
+        // Clean up balance mode
+        if (cameraCheckStream) {
+          cameraCheckStream.getTracks().forEach(track => track.stop());
+          cameraCheckStream = null;
+        }
+        resetBalanceUI();
+      }
+
       if (currentMode) {
         document.getElementById(currentMode + '-mode').classList.remove('active');
         currentMode = null;
@@ -453,6 +774,14 @@
     const ctx = canvas.getContext("2d");
     const debugEl = document.getElementById("debug");
     const statusEl = document.querySelector("#balance-status .status-text");
+    const balanceStartScreen = document.getElementById("balance-start-screen");
+    const countdownOverlay = document.getElementById("countdown-overlay");
+    const countdownNumber = document.getElementById("countdown-number");
+    const balanceStatus = document.getElementById("balance-status");
+    const stopBtnContainer = document.getElementById("stop-btn-container");
+    const bodyWarnings = document.getElementById("body-warnings");
+    const cameraCheckOverlay = document.getElementById("camera-check-overlay");
+    const cameraCheckVideo = document.getElementById("camera-check-video");
 
     let debugLines = [];
     function log(msg) {
@@ -466,6 +795,107 @@
     let isProcessing = false;
     let frameCount = 0;
     let latestLandmarks = null;
+    let balanceState = 'start'; // 'start', 'camera-check', 'countdown', 'measuring'
+    let cameraCheckStream = null;
+
+    // Camera Check Functions
+    function openCameraCheck() {
+      log("Opening camera check...");
+      balanceState = 'camera-check';
+      cameraCheckOverlay.classList.remove('hidden');
+
+      navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
+      })
+      .then(stream => {
+        cameraCheckStream = stream;
+        cameraCheckVideo.srcObject = stream;
+        cameraCheckVideo.play();
+        log("Camera check active");
+      })
+      .catch(err => {
+        log("Camera check error: " + err.message);
+        closeCameraCheck();
+      });
+    }
+
+    function closeCameraCheck() {
+      log("Closing camera check");
+      if (cameraCheckStream) {
+        cameraCheckStream.getTracks().forEach(track => track.stop());
+        cameraCheckStream = null;
+      }
+      cameraCheckVideo.srcObject = null;
+      cameraCheckOverlay.classList.add('hidden');
+      balanceState = 'start';
+    }
+
+    // Countdown Functions
+    function startBalanceCountdown() {
+      log("Starting countdown...");
+      balanceState = 'countdown';
+      balanceStartScreen.classList.add('hidden');
+      countdownOverlay.classList.remove('hidden');
+
+      let count = 5;
+      countdownNumber.textContent = count;
+
+      const countdownInterval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          countdownNumber.textContent = count;
+          // Re-trigger animation
+          countdownNumber.style.animation = 'none';
+          countdownNumber.offsetHeight; // Trigger reflow
+          countdownNumber.style.animation = 'countdownPulse 1s ease-in-out';
+        } else {
+          clearInterval(countdownInterval);
+          startBalanceMeasurement();
+        }
+      }, 1000);
+    }
+
+    // Balance Measurement Functions
+    function startBalanceMeasurement() {
+      log("Starting measurement...");
+      balanceState = 'measuring';
+      countdownOverlay.classList.add('hidden');
+      balanceStatus.classList.remove('hidden');
+      stopBtnContainer.classList.remove('hidden');
+      bodyWarnings.classList.remove('hidden');
+
+      if (!poseInitialized) {
+        initBalanceMode();
+      } else {
+        // Check if camera stream is still active
+        const stream = video.srcObject;
+        const isStreamActive = stream && stream.getTracks().some(track => track.readyState === 'live');
+
+        if (!isStreamActive) {
+          poseInitialized = false;
+          initBalanceMode();
+        } else {
+          requestAnimationFrame(processFrame);
+        }
+      }
+    }
+
+    function stopBalanceMeasurement() {
+      log("Stopping measurement");
+      balanceState = 'start';
+      balanceStatus.classList.add('hidden');
+      stopBtnContainer.classList.add('hidden');
+      bodyWarnings.classList.add('hidden');
+      balanceStartScreen.classList.remove('hidden');
+      latestLandmarks = null;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
 
     function initBalanceMode() {
       log("Starting...");
@@ -533,7 +963,7 @@
     }
 
     function processFrame() {
-      if (currentMode !== 'balance') return;
+      if (currentMode !== 'balance' || balanceState !== 'measuring') return;
 
       frameCount++;
 
@@ -563,9 +993,66 @@
       requestAnimationFrame(processFrame);
     }
 
+    // Body part visibility check
+    function checkBodyVisibility(landmarks) {
+      const warnings = [];
+      const margin = 0.05; // 5% margin from edge
+      const lowConfidence = 0.5;
+
+      // Key body parts to check
+      const bodyParts = {
+        'Head': [0], // nose
+        'Left arm': [11, 13, 15], // shoulder, elbow, wrist
+        'Right arm': [12, 14, 16],
+        'Left leg': [23, 25, 27, 31], // hip, knee, ankle, foot
+        'Right leg': [24, 26, 28, 32]
+      };
+
+      for (const [partName, indices] of Object.entries(bodyParts)) {
+        for (const idx of indices) {
+          const point = landmarks[idx];
+          if (!point) continue;
+
+          // Check if point is outside visible area
+          if (point.x < margin || point.x > (1 - margin) ||
+              point.y < margin || point.y > (1 - margin)) {
+            warnings.push(`${partName} is out of frame`);
+            break; // Only one warning per body part
+          }
+
+          // Check visibility confidence
+          if (point.visibility < lowConfidence) {
+            warnings.push(`${partName} not clearly visible`);
+            break;
+          }
+        }
+      }
+
+      return [...new Set(warnings)]; // Remove duplicates
+    }
+
+    function updateBodyWarnings(warnings) {
+      if (warnings.length === 0) {
+        bodyWarnings.innerHTML = '';
+        return;
+      }
+
+      // Only show first 2 warnings to avoid clutter
+      const displayWarnings = warnings.slice(0, 2);
+      bodyWarnings.innerHTML = displayWarnings
+        .map(w => `<div class="warning-box">⚠️ ${w}</div>`)
+        .join('');
+    }
+
     function onResults(results) {
+      if (balanceState !== 'measuring') return;
+
       if (results.poseLandmarks) {
         latestLandmarks = results.poseLandmarks;
+
+        // Check body visibility and show warnings
+        const warnings = checkBodyVisibility(results.poseLandmarks);
+        updateBodyWarnings(warnings);
 
         const leftWrist = results.poseLandmarks[15];
         const rightWrist = results.poseLandmarks[16];
@@ -578,6 +1065,7 @@
         statusEl.textContent = leftStatus + " | " + rightStatus;
       } else {
         statusEl.textContent = "No pose detected";
+        updateBodyWarnings(['Step into frame - no body detected']);
       }
     }
 
