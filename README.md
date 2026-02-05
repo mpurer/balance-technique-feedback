@@ -32,6 +32,17 @@ The main feature of the app. Tracks your body position while balancing.
    - Other body parts: warned at 8% from edge
    - Shows which direction the body part is leaving (left/right/top/bottom)
 
+6. **Session Dashboard** - After pressing Stop, see your training summary:
+   - **Training Time** - Total session duration
+   - **Left Arm Up Time** - How long your left arm was raised
+   - **Right Arm Up Time** - How long your right arm was raised
+   - **Arm Movement Chart** - Line graph showing when each arm was up/down over time
+   - **Paused Time Info** - Shows time when tracking was paused due to body parts out of frame
+   - Gray zones on chart indicate paused tracking periods
+   - Options to "Start New Session" or "Back to Menu"
+
+**Important:** Arm tracking is automatically paused when any body part moves out of frame. This ensures accurate statistics - only valid tracking time counts toward arm-up totals.
+
 ### 2. Other Modes (Coming Soon)
 
 - **Squat Reps** - Count and track squat repetitions
@@ -85,6 +96,14 @@ Simply open `index.html` in a browser or host on any web server.
 
 ## Changelog
 
+### 2024-XX-XX - Session Dashboard
+- Added dashboard screen after stopping a session
+- Display total training time, left arm up time, right arm up time
+- Added line chart showing arm positions over time (left=teal, right=red)
+- Track arm data at 100ms intervals during measurement
+- Pause tracking when any body part is out of frame
+- Show paused time and gray zones on chart for warning periods
+
 ### 2024-XX-XX - Body Visibility Warnings Improvement
 - Increased edge margins for earlier detection (8% general, 12% for hands/feet)
 - Added directional warnings (left/right/top/bottom)
@@ -114,9 +133,18 @@ The balance mode uses these states:
 - `camera-check` - Camera preview without pose detection
 - `countdown` - 5-second countdown animation
 - `measuring` - Active pose detection and feedback
+- `dashboard` - Session summary with statistics and chart
+
+### Data Tracking
+- Arm positions recorded every 100ms during measurement
+- Data structure: `{time, leftUp, rightUp, hasWarning}`
+- Warnings pause arm tracking but time continues
+- Statistics calculated from recorded data points
 
 ### CSS Color Scheme
 - Primary (yellow): `#E8FC66`
 - Dark background: `#1a1a1a`
 - Darker background: `#0d0d0d`
 - Warning red: `#ff4444`
+- Left arm (chart): `#4ECDC4` (teal)
+- Right arm (chart): `#FF6B6B` (coral red)
