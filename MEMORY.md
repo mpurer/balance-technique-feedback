@@ -50,7 +50,7 @@ start → camera-check → countdown → measuring → dashboard
 
 ### Board Detection Settings
 - Hip landmarks: 23 (left hip), 24 (right hip) → midpoint Y tracked
-- `BOARD_THRESHOLD`: 0.03 (3% of frame height)
-- `VELOCITY_THRESHOLD`: 0.008 (minimum velocity for state change)
-- `STABILITY_FRAMES`: 8 frames for confirmation
-- `HIP_HISTORY_SIZE`: 10 frames for smoothing
+- `BOARD_THRESHOLD`: 0.012 (1.2% of frame height - sensitive for small boards)
+- `VELOCITY_THRESHOLD`: 0.003 (minimum velocity for state change)
+- `STABILITY_FRAMES`: 4 frames for confirmation (fast response)
+- `HIP_HISTORY_SIZE`: 5 frames for smoothing (less lag)
