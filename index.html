@@ -258,7 +258,7 @@
       display: none;
     }
 
-    #balance-mode canvas {
+    #canvas {
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -1531,10 +1531,8 @@
         const leftShoulder = results.poseLandmarks[11];
         const rightShoulder = results.poseLandmarks[12];
 
-        // Swap left/right to match mirrored video display
-        // What appears on LEFT side of screen = person's RIGHT arm (due to mirror)
-        leftUp = rightWrist.y < rightShoulder.y;
-        rightUp = leftWrist.y < leftShoulder.y;
+        leftUp = leftWrist.y < leftShoulder.y;
+        rightUp = rightWrist.y < rightShoulder.y;
 
         const leftStatus = leftUp ? "L: UP" : "L: DOWN";
         const rightStatus = rightUp ? "R: UP" : "R: DOWN";
