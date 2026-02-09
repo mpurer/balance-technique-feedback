@@ -286,21 +286,6 @@
       display: none;
     }
 
-    #debug {
-      position: absolute;
-      bottom: 16px;
-      left: 16px;
-      right: 16px;
-      background: rgba(0,0,0,0.8);
-      color: #0f0;
-      font-family: monospace;
-      font-size: 11px;
-      padding: 12px;
-      border-radius: 8px;
-      max-height: 80px;
-      overflow-y: auto;
-    }
-
     /* ===== BALANCE START SCREEN ===== */
     #balance-start-screen {
       position: absolute;
@@ -972,7 +957,6 @@
         </div>
       </div>
 
-      <div id="debug">Debug:</div>
     </div>
   </div>
 
@@ -1096,7 +1080,6 @@
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
-    const debugEl = document.getElementById("debug");
     const statusEl = document.querySelector("#balance-status .status-text");
     const balanceStartScreen = document.getElementById("balance-start-screen");
     const countdownOverlay = document.getElementById("countdown-overlay");
@@ -1107,12 +1090,8 @@
     const cameraCheckOverlay = document.getElementById("camera-check-overlay");
     const cameraCheckVideo = document.getElementById("camera-check-video");
 
-    let debugLines = [];
     function log(msg) {
       console.log(msg);
-      debugLines.push(msg);
-      if (debugLines.length > 5) debugLines.shift();
-      debugEl.textContent = debugLines.join("\n");
     }
 
     let pose = null;
