@@ -1138,10 +1138,10 @@
     let baselineHipY = null; // Ground level hip position
     let hipYHistory = []; // Recent hip Y values for smoothing
     let stableHipY = null; // Smoothed hip Y position
-    const HIP_HISTORY_SIZE = 5; // Number of frames to average (reduced for faster response)
-    const BOARD_THRESHOLD = 0.012; // 1.2% of frame height (more sensitive for small boards)
-    const VELOCITY_THRESHOLD = 0.003; // Lower threshold for smaller movements
-    const STABILITY_FRAMES = 4; // Frames to wait for stability (reduced for less lag)
+    const HIP_HISTORY_SIZE = 3; // Minimal smoothing for fast response
+    const ON_BOARD_THRESHOLD = 0.008; // Threshold to detect stepping ON (0.8% of frame)
+    const OFF_BOARD_THRESHOLD = 0.004; // Lower threshold to detect stepping OFF (hysteresis)
+    const STABILITY_FRAMES = 2; // Minimal frames for confirmation
     let stabilityCounter = 0;
     let pendingBoardState = null;
 
@@ -1661,37 +1661,30 @@
 
       if (!boardCalibrated) return;
 
-      // Calculate velocity (change from previous smoothed value)
-      const prevY = hipYHistory.length > 1 ? hipYHistory[hipYHistory.length - 2] : smoothedY;
-      const velocity = smoothedY - prevY;
-
       // Calculate position relative to baseline
       // Note: Y increases downward, so being ON board means Y is LESS than baseline
       const heightDiff = baselineHipY - smoothedY;
 
-      // Determine expected state based on height
+      // Determine expected state with hysteresis to prevent flickering
       let expectedState;
-      if (heightDiff > BOARD_THRESHOLD) {
-        expectedState = true; // ON board (elevated)
-      } else if (heightDiff < -BOARD_THRESHOLD * 0.5) {
-        expectedState = false; // OFF board (at or below baseline)
+      if (isOnBoard) {
+        // Currently ON board - need to go below threshold to switch OFF
+        expectedState = heightDiff > OFF_BOARD_THRESHOLD;
       } else {
-        expectedState = isOnBoard; // In dead zone, keep current state
+        // Currently OFF board - need to go above threshold to switch ON
+        expectedState = heightDiff > ON_BOARD_THRESHOLD;
       }
 
-      // Check for significant velocity (movement)
-      const hasSignificantMovement = Math.abs(velocity) > VELOCITY_THRESHOLD;
-
-      // State change logic with stability confirmation
+      // State change logic with minimal stability confirmation
       if (expectedState !== isOnBoard) {
         if (pendingBoardState === expectedState) {
           stabilityCounter++;
-          if (stabilityCounter >= STABILITY_FRAMES && !hasSignificantMovement) {
+          if (stabilityCounter >= STABILITY_FRAMES) {
             // Confirmed state change
             isOnBoard = expectedState;
             pendingBoardState = null;
             stabilityCounter = 0;
-            log("Board state: " + (isOnBoard ? "ON" : "OFF") + " (diff: " + heightDiff.toFixed(3) + ")");
+            log("Board state: " + (isOnBoard ? "ON" : "OFF") + " (diff: " + heightDiff.toFixed(4) + ")");
             updateBoardStatusUI(isOnBoard ? 'on-board' : 'off-board');
           }
         } else {
